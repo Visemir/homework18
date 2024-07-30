@@ -1,0 +1,57 @@
+- hosts: servers
+  become: yes
+  tasks:
+    - name: Update apt and install dependencies
+      apt:
+        update_cache: yes
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Download Docker installation script
+      command: curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+
+    - name: Run Docker installation script
+      command: sh /tmp/get-docker.sh
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose plugin
+      apt:
+        name: docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Verify Docker installation
+      command: docker --version
+
+    - name: Verify Docker Compose installation
+      command: docker compose version
+
+    - name: Pull Nginx image
+      docker_image:
+        name: nginx
+        source: pull
+
+    - name: Create Docker Compose file
+      copy:
+        dest: /home/ubuntu/docker-compose.yml
+        content: |
+          version: '3'
+          services:
+            nginx:
+              image: nginx
+              ports:
+                - "80:80"
+
+    - name: Run Nginx with Docker Compose
+      command: docker compose -f /home/ubuntu/docker-compose.yml up -d
+      args:
+        chdir: /home/ubuntu
